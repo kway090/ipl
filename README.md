@@ -1,71 +1,93 @@
 # Van Night — Admin Exports & Integration Guide
 
-A tiny guide to help you drive the **Hardpoint**, **Consecutive Hold**, and **Flags** gamemodes from your own admin panel (or any other client script) via exports.
+Drive the **Hardpoint**, **Consecutive Hold**, and **Flags** gamemodes from your own client scripts or admin panel via exports.
 
-> These exports run **on the client** and call the built‑in server events. The server re‑checks permissions (via `Config.AdminGroup`) so cheaters can’t bypass your UI.
+> Exports run **on the client** and trigger the built-in server events. The server re-checks admin permission via `Config.AdminGroup`.
 
 ---
 
 ## Requirements
 
-- **FiveM** (b2189+ recommended)
-- **ox_lib** (for dialogs/notifications)
-- **ESX** (jobs & permissions)
-- **ox_target** (only required for *Flags*)
-- **ox_inventory** (only required for *Flags*; item name: `van_flag`)
-- Your resource name is assumed to be **`c4leb-vannight`** in examples below. Adjust if you renamed it.
+- FiveM (b2189+ recommended)
+- `ox_lib` (dialogs / notify / progress)
+- `es_extended` (ESX jobs & groups)
+- `ox_target` (only required for **Flags**)
+- `ox_inventory` (only required for **Flags**; item: `van_flag`)
+- Examples assume the resource name is **`c4leb-vannight`**.
 
 ---
 
-## Quick Start
+## Quick Reference (Client Exports)
 
-### Show the bundled dialogs (one‑liners)
+- `exports['c4leb-vannight']:StartHardpointDialog() → boolean`
+- `exports['c4leb-vannight']:StartConsecutiveDialog() → boolean`
+- `exports['c4leb-vannight']:StartFlagsDialog() → boolean`
+
+- `exports['c4leb-vannight']:StartHardpoint(cfg: table) → boolean`
+- `exports['c4leb-vannight']:StartConsecutive(cfg: table) → boolean`
+- `exports['c4leb-vannight']:StartFlags(cfg: table) → boolean`
+
+- `exports['c4leb-vannight']:GetEventStatus() → false | table`
+
+All of the above are **client exports**. Call them from any other client script.
+
+---
+
+## Show the built-in dialogs (one-liners)
 
 ```lua
--- Open built‑in dialog for each mode:
 exports['c4leb-vannight']:StartHardpointDialog()
 exports['c4leb-vannight']:StartConsecutiveDialog()
 exports['c4leb-vannight']:StartFlagsDialog()
 ```
 
-- These open an **ox_lib inputDialog**, validate inputs, and immediately start the event for the **player running the export** (permission-checked server‑side).
-- They return `true` if the dialog completed and a start request was sent, `false` if it was cancelled.
+- Opens an `ox_lib` input dialog, validates, and starts the event at the player’s position.
+- Returns `true` if a start request was sent, `false` if the dialog was cancelled.
 
-### Start a mode with your own UI data
+---
+
+## Start with your own UI data
+
+### Hardpoint
 
 ```lua
--- Hardpoint
 exports['c4leb-vannight']:StartHardpoint({
-  pointType     = 'vehicle',        -- 'vehicle' | 'npc' | 'prop'
-  radius        = 60,               -- metres
-  minContenders = 2,                -- players from same org required
-  duration      = 600,              -- seconds (total event length after reveal)
+  pointType     = 'vehicle',                 -- 'vehicle' | 'npc' | 'prop'
+  radius        = 60,                        -- metres
+  minContenders = 2,                         -- players from same org to count
+  duration      = 600,                       -- seconds (total event length after reveal)
   announcement  = 'Van Placed!',
   tip           = 'South of Vinewood Sign',
-  groupsArr     = { 'police', 'ballas', 'vagos' }, -- competing jobs
-  coords        = vec3(379.2, 795.9, 187.1),       -- or {x=,y=,z=}
-  heading       = 90.0                            -- optional
+  groupsArr     = { 'police', 'ballas', 'vagos' },
+  coords        = vec3(379.2, 795.9, 187.1), -- or {x=,y=,z=}
+  heading       = 90.0                       -- optional
 })
+```
 
--- Consecutive Hold
+### Consecutive Hold
+
+```lua
 exports['c4leb-vannight']:StartConsecutive({
   pointType     = 'npc',
   radius        = 50,
   minContenders = 1,
-  holdTime      = 420,              -- seconds to hold continuously
-  grace         = 15,               -- seconds allowed to return
+  holdTime      = 420,                       -- seconds a single org must hold continuously
+  grace         = 15,                        -- seconds to return if all leave/die
   announcement  = 'Van Placed!',
   tip           = 'Hilltop radio tower',
   groupsArr     = { 'police', 'ballas' },
   coords        = vec3(703.4, 1224.7, 329.5),
   heading       = 180.0
 })
+```
 
--- Flags (no radius/minContenders)
+### Flags
+
+```lua
 exports['c4leb-vannight']:StartFlags({
   pointType     = 'prop',
-  flagInterval  = 60,               -- seconds between flags (countdown pauses until someone claims)
-  totalFlags    = 10,               -- stop after this many claims
+  flagInterval  = 60,                        -- seconds between flags (restarts after a claim)
+  totalFlags    = 10,                        -- stop after this many claims
   announcement  = 'Van Placed!',
   tip           = 'Find the van and claim flags',
   groupsArr     = { 'police', 'ballas', 'vagos' },
@@ -74,144 +96,124 @@ exports['c4leb-vannight']:StartFlags({
 })
 ```
 
-All `Start*` exports return `true` if the payload was accepted client‑side and a start request was sent to the server (the server will still verify permissions).
+Returns `true` if the payload was accepted client-side and a start request was sent (server still enforces permissions).
 
 ---
 
-## Export Reference
+## Event Status Export
 
-### `StartHardpointDialog()` → `boolean`
-Shows the bundled **Hardpoint** dialog (with live map/marker reveal on run). On success, it sends a `vannight:StartEvent` to the server.
+### `GetEventStatus() → false | table`
 
-### `StartConsecutiveDialog()` → `boolean`
-Shows the bundled **Consecutive Hold** dialog. On success, sends `vannight:StartEvent`.
+- Returns **`false`** when **no** event is active on the client.
+- Returns a **table** with current event info when an event is running.
 
-### `StartFlagsDialog()` → `boolean`
-Shows the bundled **Flags** dialog. On success, sends `vannight:StartEvent`.
+#### Common fields (all modes)
 
-> The “Open*Dialog” exports are ideal when you don’t want to build UI. They return `false` if the dialog is closed or invalid.
+```lua
+{
+  mode      = 'hardpoint' | 'consecutive' | 'flags',
+  id        = number,                      -- event id
+  coords    = vector3(x, y, z),
+  heading   = number | nil,
+  radius    = number | nil,                -- nil for Flags (no contest radius)
+  netId     = number | nil,                -- Flags uses a networked entity
+  groupsArr = { 'police', 'ballas', ... }, -- raw array
+  groups    = { [jobName]=true, ... },     -- lookup for local visibility
 
----
+  -- last UI payload pushed to this client
+  ui = {
+    title       = string,
+    detail      = string,
+    timer1      = number | nil,         -- meaning depends on mode (see below)
+    timer2      = number | nil,         -- meaning depends on mode (see below)
+    timer1Label = string | nil,         -- may be set (e.g., Flags)
+    timer2Label = string | nil,
+    active      = boolean,              -- whether this client should see the UI
+    found       = boolean | nil         -- true after reveal (HP/CH)
+  }
+}
+```
 
-### `StartHardpoint(cfg: table)` → `boolean`
+#### Per-mode timer semantics
 
-**Required fields**
+- **Hardpoint**
+  - `ui.timer1` → seconds **held so far** for the currently holding org (if exactly one org meets `minContenders`).
+  - `ui.timer2` → **event time remaining** (countdown from `duration` after first find).
+  - `ui.detail` → `"X Holding Point!"`, `"Point Contested, Timer Paused!"`, or `"No one contesting point"`.
+  - Reveal: `ui.found` becomes `true` after the first org steps into the radius.
 
-| key            | type               | description |
-|----------------|--------------------|-------------|
-| `pointType`    | `'vehicle' \| 'npc' \| 'prop'` | Entity type spawned at `coords`. |
-| `radius`       | `number`           | Capture radius in metres. |
-| `minContenders`| `number`           | Minimum players from the same org required to “hold”. |
-| `duration`     | `number`           | Total event time (seconds) after first find. |
-| `announcement` | `string`           | UI title while hidden / placed. |
-| `tip`          | `string`           | UI subtitle while hidden / placed. |
-| `groupsArr`    | `string[]`         | Array of job names competing. |
-| `coords`       | `vec3` or `{x,y,z}`| Spawn location for entity/marker. |
+- **Consecutive Hold**
+  - `ui.timer1` → **hold time left** for the current org (counts down from `holdTime`).
+  - `ui.timer2` → **grace time left** (only when in grace). Otherwise `nil`.
+  - `ui.detail` → `"X Holding Point!"`, `"X has Ns to return!"`, `"Point Contested..."`, or `"No one..."`.
 
-**Optional**
+- **Flags**
+  - `ui.timer1` → **seconds until next flag** (counts down; resets only after a successful claim).
+  - `ui.timer2` → **flags remaining**.
+  - `ui.detail` → `"Flag Ready to Claim!"` or `"Last Flag Claimed by <Org>!"`.
+  - Labels: `ui.timer1Label = "Flag Ready in"`, `ui.timer2Label = "Flags Remaining"`.
 
-| key       | type     | description |
-|-----------|----------|-------------|
-| `heading` | `number` | Spawn heading for vehicles/peds. |
+#### Example: consume status
 
----
+```lua
+RegisterCommand('vanstatus', function()
+  local st = exports['c4leb-vannight']:GetEventStatus()
+  if not st then
+    print('No Van Night event running.')
+    return
+  end
 
-### `StartConsecutive(cfg: table)` → `boolean`
+  print(('[VanNight] mode=%s id=%s'):format(st.mode, st.id))
+  if st.ui then
+    print(('title="%s" detail="%s" t1=%s t2=%s'):format(
+      tostring(st.ui.title),
+      tostring(st.ui.detail),
+      tostring(st.ui.timer1),
+      tostring(st.ui.timer2)
+    ))
+  end
 
-**Required fields**
-
-| key            | type               | description |
-|----------------|--------------------|-------------|
-| `pointType`    | `'vehicle' \| 'npc' \| 'prop'` | Entity type spawned. |
-| `radius`       | `number`           | Capture radius in metres. |
-| `minContenders`| `number`           | Minimum players from same org to count as holding. |
-| `holdTime`     | `number`           | Seconds a single org must hold consecutively to win. |
-| `grace`        | `number`           | Seconds allowed to return if all holders leave/die. |
-| `announcement` | `string`           | UI title while hidden / placed. |
-| `tip`          | `string`           | UI subtitle while hidden / placed. |
-| `groupsArr`    | `string[]`         | Competing job names. |
-| `coords`       | `vec3` or `{x,y,z}`| Spawn location. |
-
-**Optional**: `heading` (number).
-
----
-
-### `StartFlags(cfg: table)` → `boolean`
-
-**Required fields**
-
-| key            | type               | description |
-|----------------|--------------------|-------------|
-| `pointType`    | `'vehicle' \| 'npc' \| 'prop'` | Entity type spawned (networked). |
-| `flagInterval` | `number`           | Seconds between flag availability. Timer **restarts only after a successful claim**. |
-| `totalFlags`   | `number`           | Total number of flags to award this event. |
-| `announcement` | `string`           | UI title. |
-| `tip`          | `string`           | UI subtitle. |
-| `groupsArr`    | `string[]`         | Competing job names. |
-| `coords`       | `vec3` or `{x,y,z}`| Spawn location. |
-
-**Optional**: `heading` (number).
-
-> Server grants **`van_flag`** via `ox_inventory` when a claim is validated. The server owns the **only** give‑item path; clients can’t abuse it.
+  if st.mode == 'flags' then
+    print(('next flag in: %ss, remaining: %s'):format(
+      tostring(st.ui and st.ui.timer1 or '?'),
+      tostring(st.ui and st.ui.timer2 or '?')
+    ))
+  end
+end, false)
+```
 
 ---
 
 ## Security Notes
 
-- **Server permission gate**: starting any event requires `ESX.GetPlayerFromId(src).getGroup() == Config.AdminGroup`.
-- **Flags anti‑dupe**: claims are processed in a server‑side critical section; only one claimant completes when the flag goes live.
-- **Inventory safety**: server validates mode, timers, job, distance, and uses a hard‑coded item name `van_flag` when awarding.
+- **Server gate**: starting any event requires `ESX.GetPlayerFromId(src).getGroup() == Config.AdminGroup`.
+- **Flags anti-dupe**: server processes claims in a critical section; only one winner per flag window.
+- **Inventory safety**: server awards a **hard-coded** `van_flag` via `ox_inventory` after validating mode/job/distance/timer.
 
 ---
 
 ## UI Behavior
 
-- **Hardpoint / Consecutive**: “Van Placed” → “Van Found” with timers and job‑based visibility.
-- **Flags**: Detail line shows **“Flag Ready in: N s”** or **“Flag Ready to Claim!”**, then **“Last Flag Claimed by \<Org\>!”** after a successful claim. The *remaining* counter is shown as **“Flags Remaining: X”**.
-- Blips/zone visibility matches competing jobs (and observer jobs if configured).
-
----
-
-## Example: Wiring into an Admin NUI
-
-```lua
--- Example: your admin NUI "Create Hardpoint" button
-RegisterNUICallback('createHardpoint', function(data, cb)
-  local ok = exports['c4leb-vannight']:StartHardpoint({
-    pointType     = data.pointType,          -- 'vehicle'|'npc'|'prop'
-    radius        = tonumber(data.radius),
-    minContenders = tonumber(data.minContenders),
-    duration      = tonumber(data.duration),
-    announcement  = data.announcement,
-    tip           = data.tip or '',
-    groupsArr     = data.groups,             -- e.g., {'police','ballas'}
-    coords        = vec3(data.x, data.y, data.z),
-    heading       = tonumber(data.heading) or 0.0
-  })
-  cb(ok == true)
-end)
-```
+- **Hardpoint / Consecutive**: “Van Placed” → “Van Found” with appropriate timers. Blip & zone visibility are job-based (competing jobs + observers).
+- **Flags**: shows `Flag Ready in:` and `Flags Remaining:`; displays `Flag Ready to Claim!` or `Last Flag Claimed by <Org>!`.
 
 ---
 
 ## Troubleshooting
 
-- **Nothing happens after you call a Start* export**  
-  Make sure the caller is an admin per `Config.AdminGroup`. Check server console for `[vannight]` prints.
+- **Nothing happens when calling a Start* export**  
+  Ensure the caller is in the admin group. Check server console for `[vannight]` messages.
 
-- **Entity floats for late joiners**  
-  The script settles vehicles on ground on **Begin** for clients that stream in later; ensure you kept the latest `Utils.settleVehicleOnGround` helper call in `client/main.lua`.
+- **Entity floating for late streamers**  
+  The script settles vehicles on ground on `Begin`. Keep the latest `Utils.settleVehicleOnGround` call in your client.
 
-- **ox_target not working on the van**  
-  Only the **Flags** mode uses a networked entity to allow targeting. HP/CH intentionally spawn local props/vehicles because they don’t need targeting.
+- **ox_target doesn’t show**  
+  Only the **Flags** mode uses a **networked** entity for targeting. HP/CH spawn local entities (no targeting needed).
 
 ---
 
 ## License
 
-Do whatever you need on your server(s). Please keep credits in the README if you redistribute.
+Use freely on your servers. Keep credits if you redistribute.
 
----
-
-**Credits**  
-Implementation & refactor with ❤️ by c4leb (and you, of course). PRs welcome!
+**Credits:** built with ❤️ by c4leb (+ you).
