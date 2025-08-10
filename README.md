@@ -123,21 +123,24 @@ Returns `true` if the payload was accepted client-side and a start request was s
   uiDetail  = string                         -- last detail line sent to UI
   -- (Flags may also carry cfg.netId internally; not exposed here unless you add it)
 }
-
+```
 ### Per-mode payloads
 
 #### mode == 'hardpoint'
+```lua
 status.hardpoint = {
   currentHoldSeconds = number,  -- seconds accumulated by the **current** holding org
   endsInSeconds      = number   -- event time remaining (countdown from duration)
 }
-
+```
+```lua
 #### mode == 'consecutive'
 status.consecutive = {
   holdTimeLeft = number,        -- seconds left for the current org to win
   -- graceLeft  = number|nil     -- (optional) seconds left in grace, if you expose it
 }
-
+```
+```lua
 #### mode == 'flags'
 status.flags = {
   nextFlagIn = number,          -- seconds until the next flag can be claimed
@@ -145,9 +148,9 @@ status.flags = {
   total      = number,          -- total flags configured for this run
   claimed    = number           -- how many have been successfully claimed so far
 }
-
+```
 ### Example: consume status
-
+```lua
 RegisterCommand('vanstatus', function()
   local st = exports['c4leb-vannight']:GetEventStatus()
   if not st then
