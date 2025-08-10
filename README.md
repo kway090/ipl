@@ -99,7 +99,7 @@ Shows the bundled **Flags** dialog. On success, sends `vannight:StartEvent`.
 
 | key            | type               | description |
 |----------------|--------------------|-------------|
-| `pointType`    | `'vehicle'|'npc'|'prop'` | Entity type spawned at `coords`. |
+| `pointType`    | `'vehicle' \| 'npc' \| 'prop'` | Entity type spawned at `coords`. |
 | `radius`       | `number`           | Capture radius in metres. |
 | `minContenders`| `number`           | Minimum players from the same org required to “hold”. |
 | `duration`     | `number`           | Total event time (seconds) after first find. |
@@ -122,7 +122,7 @@ Shows the bundled **Flags** dialog. On success, sends `vannight:StartEvent`.
 
 | key            | type               | description |
 |----------------|--------------------|-------------|
-| `pointType`    | `'vehicle'|'npc'|'prop'` | Entity type spawned. |
+| `pointType`    | `'vehicle' \| 'npc' \| 'prop'` | Entity type spawned. |
 | `radius`       | `number`           | Capture radius in metres. |
 | `minContenders`| `number`           | Minimum players from same org to count as holding. |
 | `holdTime`     | `number`           | Seconds a single org must hold consecutively to win. |
@@ -142,7 +142,7 @@ Shows the bundled **Flags** dialog. On success, sends `vannight:StartEvent`.
 
 | key            | type               | description |
 |----------------|--------------------|-------------|
-| `pointType`    | `'vehicle'|'npc'|'prop'` | Entity type spawned (networked). |
+| `pointType`    | `'vehicle' \| 'npc' \| 'prop'` | Entity type spawned (networked). |
 | `flagInterval` | `number`           | Seconds between flag availability. Timer **restarts only after a successful claim**. |
 | `totalFlags`   | `number`           | Total number of flags to award this event. |
 | `announcement` | `string`           | UI title. |
@@ -167,7 +167,7 @@ Shows the bundled **Flags** dialog. On success, sends `vannight:StartEvent`.
 ## UI Behavior
 
 - **Hardpoint / Consecutive**: “Van Placed” → “Van Found” with timers and job‑based visibility.
-- **Flags**: Detail line shows **“Flag Ready in: N s”** or **“Flag Ready to Claim!”**, then **“Last Flag Claimed by <Org>!”** after a successful claim. The *remaining* counter is shown as **“Flags Remaining: X”**.
+- **Flags**: Detail line shows **“Flag Ready in: N s”** or **“Flag Ready to Claim!”**, then **“Last Flag Claimed by \<Org\>!”** after a successful claim. The *remaining* counter is shown as **“Flags Remaining: X”**.
 - Blips/zone visibility matches competing jobs (and observer jobs if configured).
 
 ---
