@@ -23,9 +23,9 @@ A tiny guide to help you drive the **Hardpoint**, **Consecutive Hold**, and **Fl
 
 ```lua
 -- Open built‑in dialog for each mode:
-exports['c4leb-vannight']:OpenHardpointDialog()
-exports['c4leb-vannight']:OpenConsecutiveDialog()
-exports['c4leb-vannight']:OpenFlagsDialog()
+exports['c4leb-vannight']:StartHardpointDialog()
+exports['c4leb-vannight']:StartConsecutiveDialog()
+exports['c4leb-vannight']:StartFlagsDialog()
 ```
 
 - These open an **ox_lib inputDialog**, validate inputs, and immediately start the event for the **player running the export** (permission-checked server‑side).
@@ -80,13 +80,13 @@ All `Start*` exports return `true` if the payload was accepted client‑side and
 
 ## Export Reference
 
-### `OpenHardpointDialog()` → `boolean`
+### `StartHardpointDialog()` → `boolean`
 Shows the bundled **Hardpoint** dialog (with live map/marker reveal on run). On success, it sends a `vannight:StartEvent` to the server.
 
-### `OpenConsecutiveDialog()` → `boolean`
+### `StartConsecutiveDialog()` → `boolean`
 Shows the bundled **Consecutive Hold** dialog. On success, sends `vannight:StartEvent`.
 
-### `OpenFlagsDialog()` → `boolean`
+### `StartFlagsDialog()` → `boolean`
 Shows the bundled **Flags** dialog. On success, sends `vannight:StartEvent`.
 
 > The “Open*Dialog” exports are ideal when you don’t want to build UI. They return `false` if the dialog is closed or invalid.
