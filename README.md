@@ -133,15 +133,17 @@ status.hardpoint = {
   endsInSeconds      = number   -- event time remaining (countdown from duration)
 }
 ```
-```lua
+
 #### mode == 'consecutive'
+```lua
 status.consecutive = {
   holdTimeLeft = number,        -- seconds left for the current org to win
   -- graceLeft  = number|nil     -- (optional) seconds left in grace, if you expose it
 }
 ```
-```lua
+
 #### mode == 'flags'
+```lua
 status.flags = {
   nextFlagIn = number,          -- seconds until the next flag can be claimed
   remaining  = number,          -- flags remaining to be given out
