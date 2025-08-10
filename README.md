@@ -102,60 +102,52 @@ Returns `true` if the payload was accepted client-side and a start request was s
 
 ## Event Status Export
 
-### `GetEventStatus() → false | table`
+### GetEventStatus() → false | table
 
-- Returns **`false`** when **no** event is active on the client.
-- Returns a **table** with current event info when an event is running.
+- Returns **false** when **no** event is active on the client.
+- Returns a **table** with the current event state when an event is running.
 
-#### Common fields (all modes)
-
+### Common fields (all modes)
 ```lua
 {
   mode      = 'hardpoint' | 'consecutive' | 'flags',
-  id        = number,                      -- event id
-  coords    = vector3(x, y, z),
-  heading   = number | nil,
-  radius    = number | nil,                -- nil for Flags (no contest radius)
-  netId     = number | nil,                -- Flags uses a networked entity
-  groupsArr = { 'police', 'ballas', ... }, -- raw array
-  groups    = { [jobName]=true, ... },     -- lookup for local visibility
-
-  -- last UI payload pushed to this client
-  ui = {
-    title       = string,
-    detail      = string,
-    timer1      = number | nil,         -- meaning depends on mode (see below)
-    timer2      = number | nil,         -- meaning depends on mode (see below)
-    timer1Label = string | nil,         -- may be set (e.g., Flags)
-    timer2Label = string | nil,
-    active      = boolean,              -- whether this client should see the UI
-    found       = boolean | nil         -- true after reveal (HP/CH)
-  }
+  id        = number,                        -- event id
+  coords    = { x = number, y = number, z = number },
+  radius    = number | nil,                  -- nil for Flags (no contest radius)
+  found     = boolean,                       -- true once revealed (Flags start true)
+  ended     = boolean,                       -- true after End has fired (until cleanup)
+  myJob     = string,                        -- caller’s current ESX job
+  groups    = { 'police', 'immortalmc', ... },  -- competing jobs (array)
+  eligible  = boolean,                       -- this client is allowed to see/compete
+  uiTitle   = string,                        -- last title sent to UI
+  uiDetail  = string                         -- last detail line sent to UI
+  -- (Flags may also carry cfg.netId internally; not exposed here unless you add it)
 }
-```
 
-#### Per-mode timer semantics
+### Per-mode payloads
 
-- **Hardpoint**
-  - `ui.timer1` → seconds **held so far** for the currently holding org (if exactly one org meets `minContenders`).
-  - `ui.timer2` → **event time remaining** (countdown from `duration` after first find).
-  - `ui.detail` → `"X Holding Point!"`, `"Point Contested, Timer Paused!"`, or `"No one contesting point"`.
-  - Reveal: `ui.found` becomes `true` after the first org steps into the radius.
+#### mode == 'hardpoint'
+status.hardpoint = {
+  currentHoldSeconds = number,  -- seconds accumulated by the **current** holding org
+  endsInSeconds      = number   -- event time remaining (countdown from duration)
+}
 
-- **Consecutive Hold**
-  - `ui.timer1` → **hold time left** for the current org (counts down from `holdTime`).
-  - `ui.timer2` → **grace time left** (only when in grace). Otherwise `nil`.
-  - `ui.detail` → `"X Holding Point!"`, `"X has Ns to return!"`, `"Point Contested..."`, or `"No one..."`.
+#### mode == 'consecutive'
+status.consecutive = {
+  holdTimeLeft = number,        -- seconds left for the current org to win
+  -- graceLeft  = number|nil     -- (optional) seconds left in grace, if you expose it
+}
 
-- **Flags**
-  - `ui.timer1` → **seconds until next flag** (counts down; resets only after a successful claim).
-  - `ui.timer2` → **flags remaining**.
-  - `ui.detail` → `"Flag Ready to Claim!"` or `"Last Flag Claimed by <Org>!"`.
-  - Labels: `ui.timer1Label = "Flag Ready in"`, `ui.timer2Label = "Flags Remaining"`.
+#### mode == 'flags'
+status.flags = {
+  nextFlagIn = number,          -- seconds until the next flag can be claimed
+  remaining  = number,          -- flags remaining to be given out
+  total      = number,          -- total flags configured for this run
+  claimed    = number           -- how many have been successfully claimed so far
+}
 
-#### Example: consume status
+### Example: consume status
 
-```lua
 RegisterCommand('vanstatus', function()
   local st = exports['c4leb-vannight']:GetEventStatus()
   if not st then
@@ -163,21 +155,31 @@ RegisterCommand('vanstatus', function()
     return
   end
 
-  print(('[VanNight] mode=%s id=%s'):format(st.mode, st.id))
-  if st.ui then
-    print(('title="%s" detail="%s" t1=%s t2=%s'):format(
-      tostring(st.ui.title),
-      tostring(st.ui.detail),
-      tostring(st.ui.timer1),
-      tostring(st.ui.timer2)
-    ))
-  end
+  print('=== VanNight status ===')
+  print('uiTitle: ' .. tostring(st.uiTitle))
+  print('uiDetail: ' .. tostring(st.uiDetail))
+  print(('mode: %s  id: %s'):format(st.mode, st.id))
+  print(('coords: x=%.2f y=%.2f z=%.2f'):format(st.coords.x, st.coords.y, st.coords.z))
+  print('radius: ' .. tostring(st.radius))
+  print('found: ' .. tostring(st.found) .. '  ended: ' .. tostring(st.ended))
+  print('myJob: ' .. tostring(st.myJob) .. '  eligible: ' .. tostring(st.eligible))
 
-  if st.mode == 'flags' then
-    print(('next flag in: %ss, remaining: %s'):format(
-      tostring(st.ui and st.ui.timer1 or '?'),
-      tostring(st.ui and st.ui.timer2 or '?')
-    ))
+  print('groups:')
+  for i,job in ipairs(st.groups or {}) do print(('  %d: %s'):format(i, job)) end
+
+  if st.mode == 'hardpoint' and st.hardpoint then
+    print('hardpoint:')
+    print('  currentHoldSeconds: ' .. tostring(st.hardpoint.currentHoldSeconds))
+    print('  endsInSeconds: ' .. tostring(st.hardpoint.endsInSeconds))
+  elseif st.mode == 'consecutive' and st.consecutive then
+    print('consecutive:')
+    print('  holdTimeLeft: ' .. tostring(st.consecutive.holdTimeLeft))
+  elseif st.mode == 'flags' and st.flags then
+    print('flags:')
+    print('  nextFlagIn: ' .. tostring(st.flags.nextFlagIn))
+    print('  remaining: ' .. tostring(st.flags.remaining))
+    print('  total: ' .. tostring(st.flags.total))
+    print('  claimed: ' .. tostring(st.flags.claimed))
   end
 end, false)
 ```
